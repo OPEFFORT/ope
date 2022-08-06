@@ -102,8 +102,8 @@ python-versions: base/private_mamba_versions.$(VERSION)
 distro-versions: ## gather version of distro packages
 distro-versions: base/private_distro_versions.$(VERSION)
 
-image-sha: ## gather sha of image
-image-sha: base/private_image_sha.$(VERSION)
+image-info: ## gather sha of image
+image-info: base/private_image_sha.$(VERSION)
 
 base/private_mamba_versions.$(VERSION): IMAGE = $(PRIVATE_IMAGE)
 base/private_mamba_versions.$(VERSION): DARGS ?=
@@ -115,10 +115,10 @@ base/private_distro_versions.$(VERSION): DARGS ?=
 base/private_distro_versions.$(VERSION):
 	docker run -it --rm $(DARGS) $(PRIVATE_REG)$(IMAGE)$(PRIVATE_TAG) apt list > $@
 
-base/private_image_sha.stable: IMAGE = $(PRIVATE_IMAGE)
-base/private_distro_versions.stable: DARGS ?=
-base/private_image_sha.stable:
-	docker inspect --format='{{index .RepoDigests 0}}' $(DARGS) $(PRIVATE_REG)$(IMAGE)$(PRIVATE_TAG)  > $@
+base/private_image_info.$(VERSION): IMAGE = $(PRIVATE_IMAGE)
+base/private_image_info.$(VERSION): DARGS ?=
+base/private_image_info.$(VERSION):
+	docker inspect $(DARGS) $(PRIVATE_REG)$(IMAGE)$(PRIVATE_TAG)  > $@
 
 base/aarch64vm/README.md:
 	cd base && wget -O - ${ARCH64VMTGZ} | tar -zxf -
@@ -140,11 +140,12 @@ build: DARGS ?= --build-arg FROM_REG=$(BASE_REG) \
                    --build-arg UNMIN=$(UNMIN)
 build: ## Make the image customized appropriately
 	docker build $(DARGS) $(DCACHING) --rm --force-rm -t $(PRIVATE_REG)$(IMAGE)$(PRIVATE_TAG) base
-	-rm base/mamba_versions.$(VERSION)
-	make base/mamba_versions.$(VERSION)
-	-rm base/distro_versions.$(VERSION)
-	make base/distro_versions.$(VERSION)
-	-rm base/private_image_sha.$(VERSION)
+	-rm base/private_mamba_versions.$(VERSION)
+	make base/private_mamba_versions.$(VERSION)
+	-rm base/private_distro_versions.$(VERSION)
+	make base/private_distro_versions.$(VERSION)
+	-rm base/private_image_info.$(VERSION)
+	make base/private_image_info.$(VERSION)
 
 push: IMAGE = $(PRIVATE_IMAGE)
 push: DARGS ?=
@@ -167,9 +168,9 @@ publish: ## publish current private build to public published version
 	docker tag $(PUBLIC_REG)$(IMAGE)$(PUBLIC_TAG)_$(DATE_TAG) $(PUBLIC_REG)$(IMAGE)$(PUBLIC_TAG)
 # push to update tip to current version
 	docker push $(PUBLIC_REG)$(IMAGE)$(PUBLIC_TAG)
-	cp base/private_image_sha.private.$(VERSION)  base/private_image_sha.public.$(VERSION)
-	cp base/mamba_versions.private.$(VERSION) base/mamba_versions.public.$(VERSION)
-	cp base/distro_versions.private.$(VERSION) base/distro_versions.public.$(VERSION) 
+	cp base/private_image_info.$(VERSION)  base/public_image_info.$(VERSION)
+	cp base/private_mamba_versions.$(VERSION) base/public_mamba_versions.$(VERSION)
+	cp base/private_distro_versions.$(VERSION) base/public_distro_versions.$(VERSION) 
 
 root: IMAGE = $(PRIVATE_IMAGE)
 root: REG = $(PRIVATE_REG)
